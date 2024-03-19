@@ -1,0 +1,12 @@
+body{
+  background-color: #282c34;
+  color: white;
+}
+
+.tetris{
+  background-color: #282c34;
+}
+
+.tetris-board{
+  background-color: #222;
+}
