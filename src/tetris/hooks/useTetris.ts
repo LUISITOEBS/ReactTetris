@@ -10,7 +10,7 @@ export const useTetris = ( canvasRef: React.RefObject<HTMLCanvasElement>, canvas
 
     const [boardTetris, setBoardTetris] = useState<number[][]>( () => getEmptyMatrix( canvasSize.y / PIECE_HEIGHT, canvasSize.x / PIECE_WIDTH ) );
     
-    const [actualPiece, setActualPiece] = useState<pieceProps>({
+    const [actualPiece, setActualPiece] = useState({
         position: {
             x: 300,
             y: 0
@@ -35,10 +35,11 @@ export const useTetris = ( canvasRef: React.RefObject<HTMLCanvasElement>, canvas
     }, [context]);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            makeMovement('down', actualPiece);
-        }, 500);
-        return () => clearTimeout(timer);
+        
+        // const timer = setTimeout(() => {
+        //     makeMovement('down', actualPiece);
+        // }, 500);
+        // return () => clearTimeout(timer);
     }, [ actualPiece ])
     
 
@@ -84,7 +85,7 @@ export const useTetris = ( canvasRef: React.RefObject<HTMLCanvasElement>, canvas
         boardTetris.forEach( (row: number[]) => {
             positionX = 0;
             row.forEach((item) => {
-                if(item === 1){
+                if(item !== 0){
                     context.fillRect( positionX, positionY, PIECE_WIDTH, PIECE_HEIGHT );
                     context.strokeRect( positionX, positionY, PIECE_WIDTH, PIECE_HEIGHT );
                 }
@@ -96,7 +97,8 @@ export const useTetris = ( canvasRef: React.RefObject<HTMLCanvasElement>, canvas
 
     const checkGameStatus = () => {
         const { piece, position } = actualPiece;
-        if ( !checkCoalitions( piece, position ) ) {
+        
+        if ( !checkCoalitions( piece.shape, position ) ) {
             paintBoard();
             paintActualPiece();
             return;
@@ -115,10 +117,11 @@ export const useTetris = ( canvasRef: React.RefObject<HTMLCanvasElement>, canvas
         if(!context) return;
         let positionY = actualPiece.position.y;
         let positionX = actualPiece.position.x;
-        actualPiece.piece.forEach( (row: number[]) => {
+        actualPiece.piece.shape.forEach( (row: number[]) => {
             positionX = actualPiece.position.x;
             row.forEach((item) => {
-                if(item === 1){
+                if(item !== 0){
+                    context.fillStyle = actualPiece.piece.color;
                     context.fillRect( positionX, positionY, PIECE_WIDTH, PIECE_HEIGHT );
                     context.strokeRect( positionX, positionY, PIECE_WIDTH, PIECE_HEIGHT );
                 }
@@ -129,12 +132,12 @@ export const useTetris = ( canvasRef: React.RefObject<HTMLCanvasElement>, canvas
     };
 
     const checkStatusBoard = () => {
-        if( boardTetris[0].some(  item => item === 1) ){
+        if( boardTetris[0].some(  item => item !== 0) ){
             return true;
         }
         const newBoard = [...boardTetris];
         boardTetris.forEach( (row, index) => {
-            if( row.every(item => item === 1) ) {
+            if( row.every(item => item !== 0) ) {
                 newBoard.splice(index, 1);
                 const newRow = Array(boardTetris[0].length).fill(0);
                 newBoard.unshift( newRow );
@@ -144,20 +147,21 @@ export const useTetris = ( canvasRef: React.RefObject<HTMLCanvasElement>, canvas
         return false;
     }
 
-    const checkCoalitions = ( currentPiece: number[][], position: positionShape ) => {
+    const checkCoalitions = ( currentPiece: number[][], position: positionShape ) => {  
+        
         if(!context) return;
         let boardPositionX = position.x / PIECE_WIDTH;
         let boardPositionY = position.y / PIECE_HEIGHT;
         let positionX = boardPositionX;
         let positionY = boardPositionY;
 
-        return currentPiece.some( row => {
+        return currentPiece.some( (row : any) => {
             positionX = boardPositionX;
             positionY += 1;
-            return row.some( item => {
+            return row.some( (item : any) => {
                 positionX += 1;
                 return boardTetris[positionY - 1] 
-                ? item === 1 && boardTetris[positionY - 1 ][positionX - 1 ] !== 0 
+                ? item !== 0 && boardTetris[positionY - 1 ][positionX - 1 ] !== 0 
                 : true 
             });
         });
@@ -170,10 +174,10 @@ export const useTetris = ( canvasRef: React.RefObject<HTMLCanvasElement>, canvas
         let positionX = boardPositionX;
         let positionY = boardPositionY - 1;
 
-        piece.forEach( row => {
+        piece.shape.forEach( (row : any) => {
             positionX = boardPositionX;
-            row.forEach( item => {
-                if(item === 1 && positionY >= 0){
+            row.forEach( ( item: any) => {
+                if(item !== 0 && positionY >= 0){
                     boardTetris[positionY][positionX] = 1;
                 }
                 positionX += 1;
@@ -182,9 +186,9 @@ export const useTetris = ( canvasRef: React.RefObject<HTMLCanvasElement>, canvas
         });
     }
 
-    const makeMovement = ( direction: string, currentPiece: pieceProps ) => {
-        const { position, piece } = currentPiece;
-        const currentPieceWith =  piece[0].length * PIECE_WIDTH;
+    const makeMovement = ( direction: string, currentPiece: any ) => {
+        const { position, piece } = currentPiece;        
+        const currentPieceWith =  piece.shape[0].length * PIECE_WIDTH;
         const maxWidth = position.x + PIECE_WIDTH + currentPieceWith;
         
         switch ( direction ) {
@@ -197,22 +201,24 @@ export const useTetris = ( canvasRef: React.RefObject<HTMLCanvasElement>, canvas
             break;
             case 'right':
                 if( maxWidth > canvasSize.x ) return;
+                console.log('Moviendo a la derecha');
+                
                 updatePiece( position.x + PIECE_WIDTH, position.y, piece );
             break;
         }
     }
 
-    const rotatePiece = ( currentPiece: pieceProps ) => {
+    const rotatePiece = ( currentPiece: any ) => {
         const { position, piece } = currentPiece;
-        const matrixWidth = piece.length;
-        const matrixHeight = piece[0].length;
+        const matrixWidth = piece.shape.length;
+        const matrixHeight = piece.shape[0].length;
 
         let newPiece = getEmptyMatrix(matrixHeight, matrixWidth);  
     
         let positionY = matrixHeight - 1;
         newPiece.forEach((row, indexY) => {
             row.forEach( (_, indexX) => {
-                newPiece[indexY][indexX] = piece[indexX][positionY - indexY];
+                newPiece[indexY][indexX] = piece.shape[indexX][positionY - indexY];
             });
         });
 
@@ -227,12 +233,14 @@ export const useTetris = ( canvasRef: React.RefObject<HTMLCanvasElement>, canvas
         }
 
         if(!checkCoalitions( newPiece, piecePosition )){
-            updatePiece(position.x, position.y, newPiece);
+            console.log( piecePosition );
+            
+            updatePiece(piecePosition.x, piecePosition.y, { shape: newPiece, color: currentPiece.piece.color });
         }
         
     }
 
-    const updatePiece = ( x: number, y: number, piece: number[][] ) => {
+    const updatePiece = ( x: number, y: number, piece: any ) => {
         setActualPiece(prevState => ({
             ...prevState,
             position: {
